@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator | Turn Text into Art</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-dark: #5649c0;
+            --secondary: #00cec9;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --danger: #d63031;
+            --success: #00b894;
+            --warning: #fdcb6e;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .developer {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+        
+        .features {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .feature {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .controls {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.3s, transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #00b5b2;
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .result {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .image-container {
+            margin: 20px 0;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #generatedImage {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+        }
+        
+        .placeholder-text {
+            color: #adb5bd;
+            font-size: 1.1rem;
+        }
+        
+        .loading {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 10;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(108, 92, 231, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .error-message {
+            color: var(--danger);
+            background-color: rgba(214, 48, 49, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            color: var(--success);
+            background-color: rgba(0, 184, 148, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .styles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .style-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .style-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .style-card.selected {
+            border: 2px solid var(--primary);
+        }
+        
+        .style-card img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+        
+        .style-name {
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .telegram-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #0088cc;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 15px;
+        }
+        
+        .telegram-btn:hover {
+            background-color: #0077b3;
+        }
+        
+        @media (max-width: 600px) {
+            .features {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .styles-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Image Generator</h1>
+            <p class="subtitle">Turn text into art with stunning styles</p>
+            <p class="developer">Developed by Ramzan Ahsan</p>
+            <div class="features">
+                <span class="feature">✅ No API key</span>
+                <span class="feature">⚡ Fast & free</span>
+                <span class="feature">🎨 24+ Styles</span>
+            </div>
+        </header>
+        
+        <div class="controls">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            
+            <div class="form-group">
+                <label for="prompt">Prompt</label>
+                <textarea id="prompt" placeholder="Describe the image you want to generate..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="model">Model</label>
+                <select id="model">
+                    <option value="flux">Flux ⚡</option>
+                    <option value="sdxl">SDXL 🔍</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Style</label>
+                <div class="styles-grid" id="stylesGrid">
+                    <!-- Styles will be loaded here -->
+                </div>
+            </div>
+            
+            <button id="generateBtn" class="btn btn-block">
+                <span>Generate Image</span>
+            </button>
+        </div>
+        
+        <div class="result">
+            <h3>Generated Image</h3>
+            <div class="image-container">
+                <div class="placeholder-text">Your generated image will appear here</div>
+                <img id="generatedImage" style="display: none;">
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <div>Generating your image...</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="downloadBtn" class="btn btn-secondary" style="display: none;">
+                    <span>Download Image</span>
+                </button>
+                <button id="copyLinkBtn" class="btn" style="display: none;">
+                    <span>Copy Image Link</span>
+                </button>
+            </div>
+        </div>
+        
+        <footer>
+            <p>AI Image Generator - Free to use</p>
+            <a href="https://t.me/Tips0Courses" class="telegram-btn" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.2 2.8c-1.6-1-6.3-2.3-12.5-.8-7.6 1.8-8.4 5.8-8.7 8.6-.4 3.5 1.4 5.3 4.6 5.5 1.2.1 2.5-.4 3.3-.8l.6-.3c.7-.4 1.8-1.1 1.8-1.1s-.4.2 0 .5c.3.2.8.6 1.3.8.9.4 1.9.6 3 .5 2.5-.2 4.7-1.7 5.1-4.6.6-4.2-2.4-7.4-2.5-7.5z"></path>
+                    <path d="M10.3 14.2c-.3.4-.7.8-1.1 1.1-.2.2-.5.3-.8.4-.1 0-.2.1-.3.1-.3 0-.5-.1-.7-.2-.4-.2-.7-.6-.7-1.1 0-.2 0-.4.1-.6.1-.2.2-.4.4-.5.1-.1.3-.2.4-.2.1 0 .2-.1.3-.1.1 0 .2 0 .3.1l.1.1c.1 0 .1.1.2.1.1.1.1.1.2.2.1.1.2.2.3.3.1.1.2.1.3.2.1 0 .1.1.2.1.1 0 .1 0 .2-.1.1-.1.1-.1.2-.2.1-.1.1-.2.1-.3 0-.1 0-.2-.1-.3z"></path>
+                </svg>
+                Join Our Telegram
+            </a>
+        </footer>
+    </div>
+
+    <script>
+        // Available styles with sample image URLs
+        const styles = [
+            { name: 'pointillism', display: 'Pointillism' },
+            { name: 'manga', display: 'Manga' },
+            { name: 'pixel_art', display: 'Pixel Art' },
+            { name: 'watercolor', display: 'Watercolor' },
+            { name: 'sticker', display: 'Sticker' },
+            { name: 'anime', display: 'Anime' },
+            { name: 'cyberpunk', display: 'Cyberpunk' },
+            { name: 'fantasy', display: 'Fantasy' },
+            { name: 'steampunk', display: 'Steampunk' },
+            { name: 'oil_painting', display: 'Oil Painting' },
+            { name: 'pencil_sketch', display: 'Pencil Sketch' },
+            { name: 'chalk_drawing', display: 'Chalk Drawing' },
+            { name: 'abstract', display: 'Abstract' },
+            { name: 'surrealism', display: 'Surrealism' },
+            { name: 'pop_art', display: 'Pop Art' },
+            { name: 'graffiti', display: 'Graffiti' },
+            { name: 'low_poly', display: 'Low Poly' },
+            { name: 'isometric', display: 'Isometric' },
+            { name: 'cartoon', display: 'Cartoon' },
+            { name: 'claymation', display: 'Claymation' },
+            { name: 'origami', display: 'Origami' },
+            { name: 'paper_cut', display: 'Paper Cut' },
+            { name: 'stained_glass', display: 'Stained Glass' },
+            { name: 'vector', display: 'Vector Art' }
+        ];
+
+        // DOM elements
+        const stylesGrid = document.getElementById('stylesGrid');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const promptInput = document.getElementById('prompt');
+        const modelSelect = document.getElementById('model');
+        const generatedImage = document.getElementById('generatedImage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const placeholderText = document.querySelector('.placeholder-text');
+
+        // Current selected style
+        let selectedStyle = 'watercolor';
+        let lastGeneratedImageUrl = '';
+
+        // Initialize the app
+        function init() {
+            renderStyles();
+            setupEventListeners();
+        }
+
+        // Render available styles
+        function renderStyles() {
+            stylesGrid.innerHTML = '';
+            
+            styles.forEach(style => {
+                const styleCard = document.createElement('div');
+                styleCard.className = `style-card ${style.name === selectedStyle ? 'selected' : ''}`;
+                styleCard.dataset.style = style.name;
+                
+                const colorBox = document.createElement('div');
+                colorBox.style.height = '100px';
+                colorBox.style.backgroundColor = getRandomColor();
+                colorBox.style.display = 'flex';
+                colorBox.style.alignItems = 'center';
+                colorBox.style.justifyContent = 'center';
+                colorBox.style.color = 'white';
+                colorBox.style.fontWeight = 'bold';
+                colorBox.textContent = style.display;
+                
+                const styleName = document.createElement('div');
+                styleName.className = 'style-name';
+                styleName.textContent = style.display;
+                
+                styleCard.appendChild(colorBox);
+                styleCard.appendChild(styleName);
+                stylesGrid.appendChild(styleCard);
+            });
+        }
+
+        // Generate random color for style cards
+        function getRandomColor() {
+            const colors = [
+                '#6c5ce7', '#00cec9', '#0984e3', '#00b894', 
+                '#fd79a8', '#a29bfe', '#74b9ff', '#55efc4',
+                '#ffeaa7', '#fab1a0', '#ff7675', '#e17055'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Style selection
+            stylesGrid.addEventListener('click', (e) => {
+                const styleCard = e.target.closest('.style-card');
+                if (styleCard) {
+                    selectedStyle = styleCard.dataset.style;
+                    document.querySelectorAll('.style-card').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    styleCard.classList.add('selected');
+                }
+            });
+            
+            // Generate button
+            generateBtn.addEventListener('click', generateImage);
+            
+            // Download button
+            downloadBtn.addEventListener('click', downloadImage);
+            
+            // Copy link button
+            copyLinkBtn.addEventListener('click', copyImageLink);
+            
+            // Allow pressing Enter in the prompt textarea to generate
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    generateImage();
+                }
+            });
+        }
+
+        // Generate image from API
+        async function generateImage() {
+            const prompt = promptInput.value.trim();
+            const model = modelSelect.value;
+            
+            // Validate input
+            if (!prompt) {
+                showError('Please enter a prompt description');
+                return;
+            }
+            
+            // Clear previous results and errors
+            hideError();
+            hideSuccess();
+            
+            // Show loading indicator
+            loadingIndicator.style.display = 'flex';
+            placeholderText.style.display = 'none';
+            generatedImage.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            copyLinkBtn.style.display = 'none';
+            
+            try {
+                // Encode the prompt for URL
+                const encodedPrompt = encodeURIComponent(prompt);
+                
+                // Build the API URL with timestamp to prevent caching
+                const timestamp = Date.now();
+                const apiUrl = `https://text2img.hideme.eu.org/image?prompt=${encodedPrompt}&model=${model}&style=${selectedStyle}&_=${timestamp}`;
+                
+                // Make the request with no-cors mode
+                const response = await fetch(apiUrl, {
+                    mode: 'no-cors' // This bypasses CORS but limits response handling
+                });
+                
+                // Since we're using no-cors, we can't check response.ok
+                // Directly use the URL as the image source
+                generatedImage.src = apiUrl;
+                generatedImage.onload = () => {
+                    loadingIndicator.style.display = 'none';
+                    generatedImage.style.display = 'block';
+                    downloadBtn.style.display = 'inline-flex';
+                    copyLinkBtn.style.display = 'inline-flex';
+                    lastGeneratedImageUrl = apiUrl;
+                    showSuccess('Image generated successfully!');
+                };
+                
+                generatedImage.onerror = () => {
+                    throw new Error('Failed to load the generated image');
+                };
+            } catch (error) {
+                console.error('Error generating image:', error);
+                loadingIndicator.style.display = 'none';
+                placeholderText.style.display = 'block';
+                showError('Error generating image. Please try again.');
+            }
+        }
+
+        // Download the generated image
+        function downloadImage() {
+            if (!lastGeneratedImageUrl) return;
+            
+            const link = document.createElement('a');
+            link.href = lastGeneratedImageUrl;
+            link.download = `ai-image-${Date.now()}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Copy the image URL to clipboard
+        async function copyImageLink() {
+            if (!lastGeneratedImageUrl) return;
+            
+            try {
+                await navigator.clipboard.writeText(lastGeneratedImageUrl);
+                showSuccess('Image URL copied to clipboard!');
+            } catch (error) {
+                showError('Failed to copy image URL');
+                console.error('Copy failed:', error);
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Hide error message
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            setTimeout(hideSuccess, 3000);
+        }
+
+        // Hide success message
+        function hideSuccess() {
+            successMessage.style.display = 'none';
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
