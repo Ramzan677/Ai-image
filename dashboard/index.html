@@ -375,9 +375,6 @@
                 <button id="downloadBtn" class="btn btn-secondary" style="display: none;">
                     <span>Download Image</span>
                 </button>
-                <button id="copyLinkBtn" class="btn" style="display: none;">
-                    <span>Copy Image Link</span>
-                </button>
             </div>
         </div>
         
@@ -426,7 +423,6 @@
         const stylesGrid = document.getElementById('stylesGrid');
         const generateBtn = document.getElementById('generateBtn');
         const downloadBtn = document.getElementById('downloadBtn');
-        const copyLinkBtn = document.getElementById('copyLinkBtn');
         const promptInput = document.getElementById('prompt');
         const modelSelect = document.getElementById('model');
         const generatedImage = document.getElementById('generatedImage');
@@ -438,6 +434,7 @@
         // Current selected style
         let selectedStyle = 'watercolor';
         let lastGeneratedImageUrl = '';
+        let lastGeneratedImageBlob = null;
 
         // Initialize the app
         function init() {
@@ -504,9 +501,6 @@
             // Download button
             downloadBtn.addEventListener('click', downloadImage);
             
-            // Copy link button
-            copyLinkBtn.addEventListener('click', copyImageLink);
-            
             // Allow pressing Enter in the prompt textarea to generate
             promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -536,7 +530,6 @@
             placeholderText.style.display = 'none';
             generatedImage.style.display = 'none';
             downloadBtn.style.display = 'none';
-            copyLinkBtn.style.display = 'none';
             
             try {
                 // Encode the prompt for URL
@@ -546,56 +539,99 @@
                 const timestamp = Date.now();
                 const apiUrl = `https://text2img.hideme.eu.org/image?prompt=${encodedPrompt}&model=${model}&style=${selectedStyle}&_=${timestamp}`;
                 
-                // Make the request with no-cors mode
-                const response = await fetch(apiUrl, {
-                    mode: 'no-cors' // This bypasses CORS but limits response handling
-                });
-                
-                // Since we're using no-cors, we can't check response.ok
-                // Directly use the URL as the image source
-                generatedImage.src = apiUrl;
-                generatedImage.onload = () => {
-                    loadingIndicator.style.display = 'none';
-                    generatedImage.style.display = 'block';
-                    downloadBtn.style.display = 'inline-flex';
-                    copyLinkBtn.style.display = 'inline-flex';
+                // First try to fetch the image as a blob
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) throw new Error('API request failed');
+                    
+                    const blob = await response.blob();
+                    lastGeneratedImageBlob = blob;
                     lastGeneratedImageUrl = apiUrl;
-                    showSuccess('Image generated successfully!');
-                };
-                
-                generatedImage.onerror = () => {
-                    throw new Error('Failed to load the generated image');
-                };
+                    
+                    const objectUrl = URL.createObjectURL(blob);
+                    generatedImage.src = objectUrl;
+                    
+                    generatedImage.onload = () => {
+                        URL.revokeObjectURL(objectUrl);
+                        loadingIndicator.style.display = 'none';
+                        generatedImage.style.display = 'block';
+                        downloadBtn.style.display = 'inline-flex';
+                        showSuccess('Image generated successfully!');
+                    };
+                    
+                    generatedImage.onerror = () => {
+                        throw new Error('Failed to load the generated image');
+                    };
+                } catch (fetchError) {
+                    console.log('Direct fetch failed, falling back to image src');
+                    // Fallback to setting the image src directly
+                    generatedImage.src = apiUrl;
+                    lastGeneratedImageUrl = apiUrl;
+                    
+                    generatedImage.onload = () => {
+                        loadingIndicator.style.display = 'none';
+                        generatedImage.style.display = 'block';
+                        downloadBtn.style.display = 'inline-flex';
+                        showSuccess('Image generated successfully!');
+                    };
+                    
+                    generatedImage.onerror = () => {
+                        throw new Error('Failed to load the generated image');
+                    };
+                }
             } catch (error) {
                 console.error('Error generating image:', error);
                 loadingIndicator.style.display = 'none';
                 placeholderText.style.display = 'block';
-                showError('Error generating image. Please try again.');
+                showError('Error generating image. Please try again later.');
             }
         }
 
         // Download the generated image
-        function downloadImage() {
-            if (!lastGeneratedImageUrl) return;
-            
-            const link = document.createElement('a');
-            link.href = lastGeneratedImageUrl;
-            link.download = `ai-image-${Date.now()}.jpg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // Copy the image URL to clipboard
-        async function copyImageLink() {
-            if (!lastGeneratedImageUrl) return;
+        async function downloadImage() {
+            if (!lastGeneratedImageUrl && !lastGeneratedImageBlob) {
+                showError('No image available to download');
+                return;
+            }
             
             try {
-                await navigator.clipboard.writeText(lastGeneratedImageUrl);
-                showSuccess('Image URL copied to clipboard!');
+                // Show loading state on button
+                const originalText = downloadBtn.innerHTML;
+                downloadBtn.innerHTML = '<span>Downloading...</span>';
+                downloadBtn.disabled = true;
+                
+                let blobToDownload = lastGeneratedImageBlob;
+                
+                // If we don't have the blob but have a URL, fetch it
+                if (!blobToDownload && lastGeneratedImageUrl) {
+                    const response = await fetch(lastGeneratedImageUrl);
+                    blobToDownload = await response.blob();
+                }
+                
+                if (blobToDownload) {
+                    const url = URL.createObjectURL(blobToDownload);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `ai-image-${Date.now()}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // Clean up
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        downloadBtn.innerHTML = originalText;
+                        downloadBtn.disabled = false;
+                        showSuccess('Image downloaded successfully!');
+                    }, 100);
+                } else {
+                    throw new Error('No image data available');
+                }
             } catch (error) {
-                showError('Failed to copy image URL');
-                console.error('Copy failed:', error);
+                console.error('Download failed:', error);
+                showError('Failed to download image. Please try again.');
+                downloadBtn.innerHTML = 'Download Image';
+                downloadBtn.disabled = false;
             }
         }
 
